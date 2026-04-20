@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎴 UNO — игра с компьютером</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #1a472a 0%, #0a2a1a 100%);
+            font-family: 'Segoe UI', 'Quicksand', system-ui, 'Poppins', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        /* основной контейнер */
+        .game-container {
+            max-width: 1400px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 64px;
+            backdrop-filter: blur(4px);
+            padding: 20px 24px 30px;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+
+        /* ИИ игроки (сверху) */
+        .ai-players {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .ai-card {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 40px;
+            padding: 12px 20px;
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            box-shadow: 0 8px 14px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 215, 0, 0.4);
+        }
+
+        .ai-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #FFE484;
+            text-shadow: 2px 2px 0 #b45f1b;
+            letter-spacing: 1px;
+        }
+
+        .ai-card-count {
+            font-size: 2rem;
+            font-weight: 800;
+            background: #1e1e1e;
+            display: inline-block;
+            padding: 5px 20px;
+            border-radius: 60px;
+            margin-top: 8px;
+            color: #ffd966;
+            box-shadow: inset 0 1px 3px #00000077, 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* центр: колоды */
+        .center-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin: 20px 0 35px;
+            flex-wrap: wrap;
+        }
+
+        .pile {
+            width: 130px;
+            height: 170px;
+            border-radius: 18px;
+            box-shadow: 8px 12px 18px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .draw-pile {
+            background: radial-gradient(circle at 30% 20%, #2c2c2c, #141414);
+            border: 3px solid #ffb347;
+            color: #ffcd94;
+        }
+
+        .discard-pile {
+            background: #fff2db;
+            border: 3px solid gold;
+        }
+
+        .pile-card {
+            font-size: 2.8rem;
+            font-weight: bold;
+        }
+
+        .pile-label {
+            font-size: 0.75rem;
+            background: #000000aa;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 30px;
+            margin-top: 8px;
+        }
+
+        /* рука человека */
+        .human-hand {
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 48px;
+            padding: 18px 12px;
+            margin-top: 15px;
+            overflow-x: auto;
+            white-space: nowrap;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 12px;
+            justify-content: center;
+            min-height: 190px;
+        }
+
+        /* стиль карты */
+        .card {
+            width: 100px;
+            height: 140px;
+            background: white;
+            border-radius: 14px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.8rem;
+            box-shadow: 3px 5px 8px rgba(0, 0, 0, 0.4);
+            transition: all 0.1s ease;
+            cursor: pointer;
+            border: 2px solid #f9e0a0;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 12px 20px black;
+        }
+
+        /* цветовые схемы карт */
+        .card-red { background: #e34234; color: white; text-shadow: 1px 1px 0 #8b0000; }
+        .card-green { background: #2e8b57; color: white; text-shadow: 1px 1px 0 #004d1a; }
+        .card-blue { background: #3b83bd; color: white; text-shadow: 1px 1px 0 #003d66; }
+        .card-yellow { background: #f4c542; color: #3b2a1f; text-shadow: 0 1px 0 #ffea9e; }
+        .card-wild { background: linear-gradient(135deg, #3a3a3a, #1e1e1e); color: gold; border: 2px solid gold; }
+
+        .card-symbol {
+            font-size: 2.5rem;
+            margin-bottom: 6px;
+        }
+
+        .card-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        /* панель информации */
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 10px 10px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .turn-indicator {
+            background: #ffdd99;
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: inset 0 -1px 0 #b97f2e, 0 5px 10px black;
+        }
+
+        button {
+            background: #ffb347;
+            border: none;
+            font-weight: bold;
+            padding: 8px 26px;
+            border-radius: 60px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.1s linear;
+            box-shadow: 0 3px 0 #9b4b1a;
+            font-family: inherit;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #9b4b1a;
+        }
+
+        .message-area {
+            background: #1e2a1aee;
+            padding: 8px 18px;
+            border-radius: 60px;
+            color: #f5e3b3;
+            font-weight: bold;
+            font-size: 0.9rem;
+            max-width: 280px;
+        }
+
+        /* модальное окно для выбора цвета Wild */
+        .color-picker-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000bb;
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .color-options {
+            background: #2e241f;
+            padding: 30px;
+            border-radius: 48px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .color-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 60px;
+            border: 4px solid white;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .color-red { background: #e34234; }
+        .color-green { background: #2e8b57; }
+        .color-blue { background: #3b83bd; }
+        .color-yellow { background: #f4c542; }
+
+        @media (max-width: 700px) {
+            .card { width: 70px; height: 100px; font-size: 1.2rem; }
+            .pile { width: 90px; height: 120px; }
+            .ai-name { font-size: 1rem; }
+            .color-btn { width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="gameRoot">
+    <div class="ai-players" id="aiPlayersContainer"></div>
+    
+    <div class="center-area">
+        <div class="pile draw-pile" id="drawPileBtn">
+            <div class="pile-card">🃟</div>
+            <div class="pile-label">ВЗЯТЬ</div>
+        </div>
+        <div class="pile discard-pile" id="discardPile">
+            <div class="pile-card" id="discardTopCard">🃟</div>
+            <div class="pile-label">СБРОС</div>
+        </div>
+    </div>
+
+    <div class="human-hand" id="humanHandContainer"></div>
+
+    <div class="game-info">
+        <div class="turn-indicator" id="turnText">🔄 Ожидание...</div>
+        <div class="message-area" id="gameMessage">🎲 Добро пожаловать в UNO! Ходите картой</div>
+        <button id="drawBtn">📤 ВЗЯТЬ КАРТУ</button>
+        <button id="resetBtn">🔄 НОВАЯ ИГРА</button>
+    </div>
+</div>
+
+<script>
+    // ---------- UNO Game Logic ----------
+    const COLORS = ['red', 'green', 'blue', 'yellow'];
+    const SPECIALS = ['skip', 'reverse', 'draw_two'];
+    
+    // Создание перетасованной колоды
+    function createDeck() {
+        let deck = [];
+        for (let color of COLORS) {
+            deck.push({ color, type: 'number', value: 0 });
+            for (let i = 1; i <= 9; i++) {
+                deck.push({ color, type: 'number', value: i });
+                deck.push({ color, type: 'number', value: i });
+            }
+            for (let sp of SPECIALS) {
+                deck.push({ color, type: sp });
+                deck.push({ color, type: sp });
+            }
+        }
+        for (let i = 0; i < 4; i++) deck.push({ color: null, type: 'wild' });
+        for (let i = 0; i < 4; i++) deck.push({ color: null, type: 'wild_draw_four' });
+        return shuffle(deck);
+    }
+    
+    function shuffle(deck) {
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+    }
+    
+    // Глобальное состояние
+    let players = [];        // 0 - человек, 1 - AI 1, 2 - AI 2
+    let drawPile = [];
+    let discardPile = [];
+    let currentTurnIdx = 0;
+    let direction = 1;       // 1 - по часовой, -1 против
+    let gameActive = true;
+    let waitingForWild = false;
+    let wildCallback = null;
+    
+    // DOM элементы
+    const aiContainer = document.getElementById('aiPlayersContainer');
+    const humanHandDiv = document.getElementById('humanHandContainer');
+    const turnText = document.getElementById('turnText');
+    const gameMessage = document.getElementById('gameMessage');
+    const discardTopCardDiv = document.getElementById('discardTopCard');
+    const drawBtn = document.getElementById('drawBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    // Вспомогательные функции
+    function updateUI() {
+        // отрисовка ИИ
+        aiContainer.innerHTML = '';
+        for (let i = 1; i <= 2; i++) {
+            const count = players[i].length;
+            const name = i === 1 ? '🤖 СОПЕРНИК 1' : '🤖 СОПЕРНИК 2';
+            const div = document.createElement('div');
+            div.className = 'ai-card';
+            div.innerHTML = `<div class="ai-name">${name}</div><div class="ai-card-count">${count} 🃟</div>`;
+            aiContainer.appendChild(div);
+        }
+        
+        // рука человека
+        humanHandDiv.innerHTML = '';
+        if (players[0]) {
+            players[0].forEach((card, idx) => {
+                const cardDiv = createCardElement(card, idx);
+                humanHandDiv.appendChild(cardDiv);
+            });
+        }
+        
+        // отображение верхней карты сброса
+        if (discardPile.length > 0) {
+            const top = discardPile[discardPile.length - 1];
+            discardTopCardDiv.innerHTML = getCardSymbol(top);
+            discardTopCardDiv.style.background = getCardBgColor(top);
+        } else {
+            discardTopCardDiv.innerHTML = '🃟';
+            discardTopCardDiv.style.background = '#fff2db';
+        }
+        
+        // индикатор хода
+        if (!gameActive) {
+            turnText.innerText = '🏆 ИГРА ОКОНЧЕНА';
+        } else if (waitingForWild) {
+            turnText.innerText = '🎨 ВЫБЕРИТЕ ЦВЕТ';
+        } else {
+            const isHumanTurn = (currentTurnIdx === 0);
+            turnText.innerText = isHumanTurn ? '✨ ВАШ ХОД ✨' : '🤖 ХОД СОПЕРНИКА...';
+        }
+    }
+    
+    function getCardBgColor(card) {
+        if (card.type === 'wild' || card.type === 'wild_draw_four') return 'linear-gradient(135deg, #3a3a3a, #1e1e1e)';
+        switch (card.color) {
+            case 'red': return '#e34234';
+            case 'green': return '#2e8b57';
+            case 'blue': return '#3b83bd';
+            case 'yellow': return '#f4c542';
+            default: return '#ddd';
+        }
+    }
+    
+    function getCardSymbol(card) {
+        if (card.type === 'number') return `${card.value}`;
+        if (card.type === 'skip') return '⛔';
+        if (card.type === 'reverse') return '🔄';
+        if (card.type === 'draw_two') return '+2';
+        if (card.type === 'wild') return '🌈';
+        if (card.type === 'wild_draw_four') return '+4🌈';
+        return '?';
+    }
+    
+    function createCardElement(card, idx) {
+        const div = document.createElement('div');
+        div.className = `card card-${card.color ? card.color : 'wild'}`;
+        const symbol = getCardSymbol(card);
+        let inner = `<div class="card-symbol">${symbol}</div>`;
+        if (card.type === 'number') inner += `<div class="card-value">${card.value}</div>`;
+        else inner += `<div class="card-value">${card.type === 'skip' ? 'SKIP' : card.type === 'reverse' ? 'REV' : card.type === 'draw_two' ? '+2' : card.type === 'wild' ? 'WILD' : '+4'}</div>`;
+        div.innerHTML = inner;
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!gameActive || waitingForWild || currentTurnIdx !== 0) {
+                gameMessage.innerText = 'Сейчас не ваш ход или ожидание выбора цвета!';
+                return;
+            }
+            playCardFromHuman(idx);
+        });
+        return div;
+    }
+    
+    // Проверка: может ли карта быть сыграна на текущую верхнюю
+    function isCardPlayable(card, topCard) {
+        if (card.type === 'wild') return true;
+        if (card.type === 'wild_draw_four') return true;
+        if (card.color === topCard.color) return true;
+        if (card.type === 'number' && topCard.type === 'number' && card.value === topCard.value) return true;
+        if (card.type !== 'number' && topCard.type !== 'number' && card.type === topCard.type) return true;
+        return false;
+    }
+    
+    // Применение эффекта карты (после того как сыграли)
+    function applyCardEffect(card, playerIdx) {
+        const nextIdx = getNextPlayerIndex(currentTurnIdx, direction);
+        if (card.type === 'skip') {
+            // пропуск следующего игрока
+            gameMessage.innerText = `Пропуск хода!`;
+            currentTurnIdx = nextIdx;
+        } 
+        else if (card.type === 'reverse') {
+            direction *= -1;
+            gameMessage.innerText = `Направление изменено!`;
+            if (players.length === 2) {
+                // при 2 игроках reverse действует как пропуск
+                currentTurnIdx = getNextPlayerIndex(currentTurnIdx, direction);
+            } else {
+                currentTurnIdx = getNextPlayerIndex(currentTurnIdx, direction);
+            }
+        }
+        else if (card.type === 'draw_two') {
+            const victim = nextIdx;
+            for (let i = 0; i < 2; i++) drawCardToPlayer(victim);
+            gameMessage.innerText = `${getPlayerName(victim)} берет 2 карты и пропускает ход!`;
+            currentTurnIdx = getNextPlayerIndex(victim, direction);
+        }
+        else if (card.type === 'wild_draw_four') {
+            const victim = nextIdx;
+            for (let i = 0; i < 4; i++) drawCardToPlayer(victim);
+            gameMessage.innerText = `${getPlayerName(victim)} берет 4 карты! Ход пропущен.`;
+            currentTurnIdx = getNextPlayerIndex(victim, direction);
+        }
+        else {
+            // обычная карта
+            currentTurnIdx = getNextPlayerIndex(currentTurnIdx, direction);
+        }
+        // проверка на победу после эффекта
+        checkWinAfterMove();
+    }
+    
+    function getPlayerName(idx) {
+        if (idx === 0) return 'Вы';
+        return `Соперник ${idx}`;
+    }
+    
+    function getNextPlayerIndex(current, dir) {
+        let next = (current + dir + players.length) % players.length;
+        return next;
+    }
+    
+    function drawCardToPlayer(playerIdx, amount = 1) {
+        for (let i = 0; i < amount; i++) {
+            if (drawPile.length === 0) reshuffleFromDiscard();
+            if (drawPile.length === 0) return;
+            const drawn = drawPile.pop();
+            players[playerIdx].push(drawn);
+        }
+        if (playerIdx === 0) updateUI();
+        else updateUI();
+    }
+    
+    function reshuffleFromDiscard() {
+        if (discardPile.length <= 1) return;
+        const top = discardPile.pop();
+        drawPile = shuffle([...discardPile]);
+        discardPile = [top];
+        updateUI();
+    }
+    
+    // Игрок берет карту (кнопка)
+    function humanDraw() {
+        if (!gameActive || waitingForWild || currentTurnIdx !== 0) {
+            gameMessage.innerText = 'Сейчас нельзя взять карту!';
+            return;
+        }
+        drawCardToPlayer(0, 1);
+        const drawnCard = players[0][players[0].length - 1];
+        gameMessage.innerText = `Вы взяли карту. ${isCardPlayable(drawnCard, discardPile[discardPile.length-1]) ? 'Можете её сыграть!' : 'Карта не подходит, ход переходит.'}`;
+        // если взятая карта подходит, можно дать возможность сыграть? По классике: после взятия если карта подходит, можно сыграть сразу, но упростим: автоматически передаём ход если не сыграна. Дадим возможность: но для лучшего UX, после взятия оставляем ход человеку на 2 секунды? Нет, лучше разрешить сыграть эту карту, но не принудительно. Сделаем так: если игрок нажмет на взятую карту в том же ходу - сыграет. Но для упрощения автоматически не заставляем, оставляем ход за человеком, но если он не сыграет и нажмет взять снова - штраф? по правилам UNO можно взять карту и если она подходит - сыграть её. Оставим: после взятия ход не переходит автоматически, человек может сыграть любую подходящую (включая новую). Но если он нажмет "Взять карту" ещё раз - это будет нарушением (нельзя брать две подряд). Запретим повторный draw в том же ходу.
+        drawBtn.disabled = false; // но логика: фиксируем, что в текущем ходу уже брал карту? Добавим флаг.
+        if (!window._hasDrawnThisTurn) window._hasDrawnThisTurn = true;
+        updateUI();
+        // Через некоторое время если не сыграл - ход переходит? Но лучше: человек играет или нажимает "завершить ход"? Не будем усложнять, добавим кнопку "Пропустить ход"? Но по правилам после взятия если не сыграл, ход переходит. Реализуем таймер? не надо. Сделаем кнопку "Закончить ход" либо автоматический переход после взятия через 3 секунды? Это неудобно. Лучше: если игрок взял карту и не играет, он может нажать кнопку "Пропустить ход". Добавим кнопку "Пропустить" для удобства.
+        // Для честности добавим кнопку "Завершить ход" или автоматическая передача хода если игрок нажал на любую неиграбельную? сложно. Я добавлю отдельную кнопку "Пропустить ход" под кнопками.
+    }
+    
+    // сыграть карту от человека
+    function playCardFromHuman(cardIndex) {
+        if (!gameActive || waitingForWild || currentTurnIdx !== 0) return;
+        const card = players[0][cardIndex];
+        const topCard = discardPile[discardPile.length - 1];
+        if (!isCardPlayable(card, topCard)) {
+            gameMessage.innerText = '❌ Эта карта не подходит!';
+            return;
+        }
+        // играем карту
+        players[0].splice(cardIndex, 1);
+        discardPile.push(card);
+        updateUI();
+        
+        // Обработка wild карт
+        if (card.type === 'wild' || card.type === 'wild_draw_four') {
+            waitingForWild = true;
+            gameActive = false; // временно блокируем ходы
+            showWildColorPicker((chosenColor) => {
+                card.color = chosenColor;
+                waitingForWild = false;
+                gameActive = true;
+                gameMessage.innerText = `Вы выбрали цвет ${chosenColor}!`;
+                applyCardEffect(card, 0);
+                afterMove();
+            });
+            return;
+        }
+        applyCardEffect(card, 0);
+        afterMove();
+    }
+    
+    function afterMove() {
+        if (!gameActive) return;
+        // проверить победу после хода
+        if (players[0].length === 0) {
+            gameActive = false;
+            gameMessage.innerText = '🎉 ПОБЕДА! Вы выиграли партию! 🎉';
+            updateUI();
+            return;
+        }
+        for (let i = 1; i <= 2; i++) {
+            if (players[i].length === 0) {
+                gameActive = false;
+                gameMessage.innerText = `😭 Соперник ${i} победил! Игра окончена.`;
+                updateUI();
+                return;
+            }
+        }
+        updateUI();
+        // если игра активна и ход не человеческий - запускаем AI ход
+        if (gameActive && currentTurnIdx !== 0 && !waitingForWild) {
+            setTimeout(() => aiTurn(), 400);
+        }
+    }
+    
+    function checkWinAfterMove() {
+        if (players[0].length === 0) {
+            gameActive = false;
+            gameMessage.innerText = '🏆 ВЫ ПОБЕДИЛИ! Поздравляем!';
+            updateUI();
+            return true;
+        }
+        for (let i = 1; i <= 2; i++) {
+            if (players[i].length === 0) {
+                gameActive = false;
+                gameMessage.innerText = `💀 Победил ${getPlayerName(i)}... Игра завершена.`;
+                updateUI();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // AI логика
+    function aiTurn() {
+        if (!gameActive || waitingForWild || currentTurnIdx === 0) return;
+        const aiIdx = currentTurnIdx;
+        const hand = players[aiIdx];
+        const topCard = discardPile[discardPile.length - 1];
+        let playableIndex = -1;
+        for (let i = 0; i < hand.length; i++) {
+            if (isCardPlayable(hand[i], topCard)) {
+                playableIndex = i;
+                break;
+            }
+        }
+        if (playableIndex !== -1) {
+            const playedCard = hand[playableIndex];
+            hand.splice(playableIndex, 1);
+            discardPile.push(playedCard);
+            updateUI();
+            gameMessage.innerText = `${getPlayerName(aiIdx)} сыграл карту ${getCardSymbol(playedCard)}`;
+            // Обработка wild для AI
+            if (playedCard.type === 'wild' || playedCard.type === 'wild_draw_four') {
+                const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+                playedCard.color = randomColor;
+                gameMessage.innerText += ` и выбрал цвет ${randomColor}`;
+                applyCardEffect(playedCard, aiIdx);
+                afterMove();
+                return;
+            }
+            applyCardEffect(playedCard, aiIdx);
+            afterMove();
+        } else {
+            // берем карту
+            drawCardToPlayer(aiIdx, 1);
+            const newCard = players[aiIdx][players[aiIdx].length - 1];
+            gameMessage.innerText = `${getPlayerName(aiIdx)} взял карту.`;
+            updateUI();
+            if (isCardPlayable(newCard, topCard)) {
+                // AI сыграет её сразу
+                const playedCard = players[aiIdx].pop();
+                discardPile.push(playedCard);
+                updateUI();
+                gameMessage.innerText = `${getPlayerName(aiIdx)} сыграл взятую карту!`;
+                if (playedCard.type === 'wild' || playedCard.type === 'wild_draw_four') {
+                    const randColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+                    playedCard.color = randColor;
+                    applyCardEffect(playedCard, aiIdx);
+                    afterMove();
+                    return;
+                }
+                applyCardEffect(playedCard, aiIdx);
+                afterMove();
+            } else {
+                // ход переходит
+                gameMessage.innerText = `${getPlayerName(aiIdx)} не смог сыграть, ход переходит.`;
+                currentTurnIdx = getNextPlayerIndex(currentTurnIdx, direction);
+                afterMove();
+            }
+        }
+    }
+    
+    function showWildColorPicker(callback) {
+        const modal = document.createElement('div');
+        modal.className = 'color-picker-modal';
+        const colorDiv = document.createElement('div');
+        colorDiv.className = 'color-options';
+        COLORS.forEach(col => {
+            const btn = document.createElement('div');
+            btn.className = `color-btn color-${col}`;
+            btn.addEventListener('click', () => {
+                modal.remove();
+                callback(col);
+            });
+            colorDiv.appendChild(btn);
+        });
+        modal.appendChild(colorDiv);
+        document.body.appendChild(modal);
+    }
+    
+    // новая игра
+    function newGame() {
+        const fullDeck = createDeck();
+        players = [[], [], []];
+        for (let i = 0; i < 7; i++) {
+            players[0].push(fullDeck.pop());
+            players[1].push(fullDeck.pop());
+            players[2].push(fullDeck.pop());
+        }
+        drawPile = fullDeck;
+        let firstCard = drawPile.pop();
+        while (firstCard.type === 'wild' || firstCard.type === 'wild_draw_four') {
+            drawPile.unshift(firstCard);
+            firstCard = drawPile.pop();
+        }
+        discardPile = [firstCard];
+        direction = 1;
+        currentTurnIdx = 0;
+        gameActive = true;
+        waitingForWild = false;
+        window._hasDrawnThisTurn = false;
+        // если первая карта имеет эффект? (skip/reverse/draw_two) применяем для начала игры
+        if (firstCard.type === 'reverse') direction = -1;
+        if (firstCard.type === 'skip') currentTurnIdx = getNextPlayerIndex(0, direction);
+        if (firstCard.type === 'draw_two') {
+            const next = getNextPlayerIndex(0, direction);
+            drawCardToPlayer(next, 2);
+            currentTurnIdx = getNextPlayerIndex(next, direction);
+        }
+        updateUI();
+        gameMessage.innerText = 'Новая игра! Ваш ход.';
+        if (currentTurnIdx !== 0 && gameActive) setTimeout(() => aiTurn(), 500);
+    }
+    
+    // обработчики кнопок
+    drawBtn.addEventListener('click', () => {
+        if (!gameActive || waitingForWild) return;
+        if (currentTurnIdx !== 0) {
+            gameMessage.innerText = 'Сейчас ход не ваш!';
+            return;
+        }
+        humanDraw();
+    });
+    
+    resetBtn.addEventListener('click', () => {
+        newGame();
+    });
+    
+    // дополнительная кнопка пропуска хода (удобно)
+    const skipBtn = document.createElement('button');
+    skipBtn.innerText = '⏩ ПРОПУСТИТЬ ХОД';
+    skipBtn.style.marginLeft = '8px';
+    skipBtn.addEventListener('click', () => {
+        if (!gameActive || waitingForWild || currentTurnIdx !== 0) {
+            gameMessage.innerText = 'Нельзя пропустить ход!';
+            return;
+        }
+        gameMessage.innerText = 'Вы пропустили ход!';
+        currentTurnIdx = getNextPlayerIndex(currentTurnIdx, direction);
+        updateUI();
+        if (gameActive && currentTurnIdx !== 0) setTimeout(() => aiTurn(), 300);
+    });
+    document.querySelector('.game-info').appendChild(skipBtn);
+    
+    // старт игры
+    newGame();
+</script>
+</body>
+</html>
